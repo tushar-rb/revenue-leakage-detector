@@ -71,14 +71,9 @@ python scripts/generate_sample_data.py
 python main.py
 ```
 
-5. Access the web dashboard:
+5. Access the web dashboard (enhanced version with Indian formatting):
 ```
 http://localhost:8000
-```
-
-6. Access the enhanced dashboard with Indian formatting:
-```
-http://localhost:8000/enhanced
 ```
 
 ## Project Structure

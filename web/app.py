@@ -242,16 +242,7 @@ def create_visualizations():
 
 @app.route('/')
 def dashboard():
-    """Main dashboard view"""
-    metrics = get_system_metrics()
-    charts = create_visualizations()
-    
-    return render_template('dashboard.html', metrics=metrics, charts=charts)
-
-
-@app.route('/enhanced')
-def enhanced_dashboard():
-    """Enhanced dashboard view with Indian formatting and interactive features"""
+    """Main dashboard view (enhanced version)"""
     metrics = get_system_metrics()
     charts = create_visualizations()
     
