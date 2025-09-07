@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Revenue Leakage Detection System{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.9);
+            padding: 0.75rem 1rem;
+            margin: 0.2rem 0;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+        .critical { color: #dc3545; }
+        .high { color: #fd7e14; }
+        .medium { color: #ffc107; }
+        .low { color: #198754; }
+        .navbar-brand {
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+        }
+        .btn-gradient:hover {
+            background: linear-gradient(135deg, #764ba2, #667eea);
+            color: white;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .table-responsive {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .loading-spinner {
+            display: none;
+        }
+    </style>
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-bar-chart-line-fill me-2"></i>
+                Revenue Leakage Detection System
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">
+                            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('enhanced_dashboard') }}">
+                            <i class="bi bi-speedometer me-1"></i>Enhanced Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('reports') }}">
+                            <i class="bi bi-file-earmark-text me-1"></i>Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('tickets') }}">
+                            <i class="bi bi-ticket-detailed me-1"></i>Tickets
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-gradient btn-sm ms-2" onclick="runAnalysis()">
+                            <i class="bi bi-play-circle me-1"></i>Run Analysis
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                            <i class="bi bi-house-door me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'enhanced_dashboard' %}active{% endif %}" href="{{ url_for('enhanced_dashboard') }}">
+                            <i class="bi bi-speedometer me-2"></i>Enhanced Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'reports' %}active{% endif %}" href="{{ url_for('reports') }}">
+                            <i class="bi bi-graph-up me-2"></i>Analytics
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'tickets' %}active{% endif %}" href="{{ url_for('tickets') }}">
+                            <i class="bi bi-list-task me-2"></i>Investigation Tickets
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'reports' %}active{% endif %}" href="{{ url_for('reports') }}">
+                            <i class="bi bi-file-earmark-pdf me-2"></i>Executive Reports
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <hr class="text-white-50">
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="generateSampleData()">
+                            <i class="bi bi-database me-2"></i>Generate Sample Data
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('health') }}" target="_blank">
+                            <i class="bi bi-heart-pulse me-2"></i>System Health
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center p-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 id="loadingText">Processing...</h5>
+                    <p class="text-muted">Please wait while the AI agents analyze your data.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer" class="position-fixed top-0 end-0 p-3" style="z-index: 1100;"></div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Global JavaScript -->
+    <script>
+        // Show alert function
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHTML = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            alertContainer.insertAdjacentHTML('beforeend', alertHTML);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                const alert = document.getElementById(alertId);
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+
+        // Run analysis function
+        function runAnalysis() {
+            const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            loadingModal.show();
+            
+            document.getElementById('loadingText').textContent = 'Running AI Analysis...';
+            
+            fetch('/api/run-analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    confidence_threshold: 0.7
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingModal.hide();
+                
+                if (data.status === 'success') {
+                    showAlert('Analysis completed successfully! ' + data.summary.detections_found + ' issues detected.', 'success');
+                    // Refresh the page to show new data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showAlert('Analysis failed: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                loadingModal.hide();
+                showAlert('Error running analysis: ' + error.message, 'danger');
+            });
+        }
+
+        // Generate sample data function
+        function generateSampleData() {
+            const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            loadingModal.show();
+            
+            document.getElementById('loadingText').textContent = 'Generating Sample Data...';
+            
+            fetch('/generate-sample-data')
+            .then(response => response.json())
+            .then(data => {
+                loadingModal.hide();
+                
+                if (data.status === 'success') {
+                    showAlert('Sample data generated successfully!', 'success');
+                } else {
+                    showAlert('Failed to generate sample data: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                loadingModal.hide();
+                showAlert('Error generating sample data: ' + error.message, 'danger');
+            });
+        }
+
+        // Auto-refresh metrics every 30 seconds
+        setInterval(() => {
+            if (window.location.pathname === '/') {
+                fetch('/api/metrics')
+                .then(response => response.json())
+                .then(data => {
+                    // Update metric cards if they exist
+                    updateMetrics(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching metrics:', error);
+                });
+            }
+        }, 30000);
+
+        function updateMetrics(metrics) {
+            // Update metric displays with Indian formatting
+            const elements = {
+                'totalDetections': metrics.total_detections.toLocaleString('en-IN'),
+                'totalLoss': formatIndianCurrency(metrics.total_estimated_loss),
+                'criticalIssues': metrics.critical_issues.toLocaleString('en-IN'),
+                'ticketsCreated': metrics.tickets_created.toLocaleString('en-IN'),
+                'systemStatus': metrics.system_status
+            };
+
+            Object.entries(elements).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value;
+                }
+            });
+        }
+
+        // Format currency in Indian style
+        function formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '₹0.00';
+            
+            // Convert to number if string
+            const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+            if (isNaN(num)) return '₹0.00';
+            
+            // Format with Indian numbering system
+            return '₹' + num.toLocaleString('en-IN', {
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 2
+            });
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

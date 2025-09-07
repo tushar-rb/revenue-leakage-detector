@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Revenue Leakage Detection{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="content-header">
+        <div class="header-title">
+            <h1><i class="fas fa-chart-line"></i> Reports</h1>
+            <p class="text-muted">Executive reports and analytical insights</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="generateReport()">
+                <i class="fas fa-file-alt"></i> Generate Report
+            </button>
+            <button class="btn btn-outline-secondary" onclick="exportReports()">
+                <i class="fas fa-download"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">${{ "{:,.0f}".format(executive_report.get('total_revenue_at_risk', 0) if executive_report else 0) }}</h3>
+                            <p class="mb-0">Revenue at Risk</p>
+                        </div>
+                        <div class="metric-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ tickets_summary.total if tickets_summary else 0 }}</h3>
+                            <p class="mb-0">Total Reports</p>
+                        </div>
+                        <div class="metric-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ tickets_summary.critical if tickets_summary else 0 }}</h3>
+                            <p class="mb-0">Critical Issues</p>
+                        </div>
+                        <div class="metric-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">${{ "{:,.0f}".format(executive_report.get('potential_recovery', 0) if executive_report else 0) }}</h3>
+                            <p class="mb-0">Recovered Revenue</p>
+                        </div>
+                        <div class="metric-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Section -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Executive Summary Reports</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Report</th>
+                                    <th>Generated</th>
+                                    <th>Priority</th>
+                                    <th>Revenue Impact</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if executive_report %}
+                                <tr>
+                                    <td>
+                                        <strong>Executive Summary Report</strong><br>
+                                        <small class="text-muted">{{ executive_report.get('summary', 'AI-generated revenue leakage analysis report')[:100] }}...</small>
+                                    </td>
+                                    <td>{{ executive_report.get('timestamp', 'N/A') }}</td>
+                                    <td>
+                                        <span class="badge badge-{{ 'danger' if executive_report.get('critical_issues', 0) > 10 else 'warning' if executive_report.get('critical_issues', 0) > 5 else 'info' }}">
+                                            {{ 'Critical' if executive_report.get('critical_issues', 0) > 10 else 'High' if executive_report.get('critical_issues', 0) > 5 else 'Medium' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>${{ "{:,.0f}".format(executive_report.get('total_revenue_at_risk', 0)) }}</strong>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="viewExecutiveReport()">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="downloadExecutiveReport()">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">
+                                        <i class="fas fa-file-alt fa-3x mb-3"></i><br>
+                                        No reports generated yet. Click "Run Analysis" first, then "Generate Report" to create your first report.
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Report Generation -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Generate New Report</h5>
+                </div>
+                <div class="card-body">
+                    <form id="reportForm">
+                        <div class="form-group">
+                            <label for="reportType">Report Type</label>
+                            <select class="form-control" id="reportType" name="reportType">
+                                <option value="executive">Executive Summary</option>
+                                <option value="detailed">Detailed Analysis</option>
+                                <option value="trend">Trend Analysis</option>
+                                <option value="customer">Customer Impact</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dateRange">Date Range</label>
+                            <select class="form-control" id="dateRange" name="dateRange">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30">Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="customDateRange" style="display: none;">
+                            <label for="startDate">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" name="startDate">
+                            <label for="endDate">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="endDate">
+                        </div>
+                        <button type="button" class="btn btn-primary btn-block" onclick="generateCustomReport()">
+                            <i class="fas fa-cog"></i> Generate Report
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="scheduleReport()">
+                            <i class="fas fa-clock"></i> Schedule Report
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="exportAllReports()">
+                            <i class="fas fa-download"></i> Export All
+                        </button>
+                        <button class="btn btn-outline-info" onclick="emailReport()">
+                            <i class="fas fa-envelope"></i> Email Report
+                        </button>
+                        <button class="btn btn-outline-success" onclick="viewDashboard()">
+                            <i class="fas fa-chart-bar"></i> View Dashboard
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Report functionality
+function generateReport() {
+    showLoading('Generating executive report...');
+    
+    fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            type: 'executive',
+            date_range: '30'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            showAlert('success', 'Report generated successfully!');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('danger', 'Failed to generate report: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        showAlert('danger', 'Error generating report: ' + error);
+    });
+}
+
+function generateCustomReport() {
+    const form = document.getElementById('reportForm');
+    const formData = new FormData(form);
+    const reportData = Object.fromEntries(formData);
+    
+    showLoading('Generating custom report...');
+    
+    fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(reportData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            showAlert('success', 'Custom report generated successfully!');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('danger', 'Failed to generate report: ' + data.error);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        showAlert('danger', 'Error generating report: ' + error);
+    });
+}
+
+function viewReport(reportId) {
+    window.open(`/api/reports/${reportId}/view`, '_blank');
+}
+
+function downloadReport(reportId) {
+    window.location.href = `/api/reports/${reportId}/download`;
+}
+
+function viewExecutiveReport() {
+    // Create modal to show executive report
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'executiveReportModal';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Executive Summary Report</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="executiveReportContent">Loading...</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadExecutiveReport()">Download</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Load and display executive report
+    fetch('/api/executive-report')
+        .then(response => response.json())
+        .then(data => {
+            const content = document.getElementById('executiveReportContent');
+            if (data.error) {
+                content.innerHTML = `<div class="alert alert-warning">${data.error}</div>`;
+            } else {
+                content.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Key Metrics</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Total Revenue at Risk:</strong> $${(data.total_revenue_at_risk || 0).toLocaleString()}</li>
+                                <li><strong>Critical Issues:</strong> ${data.critical_issues || 0}</li>
+                                <li><strong>High Priority Issues:</strong> ${data.high_priority_issues || 0}</li>
+                                <li><strong>Potential Recovery:</strong> $${(data.potential_recovery || 0).toLocaleString()}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Analysis Summary</h6>
+                            <p class="text-muted">${data.summary || 'No summary available'}</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Recommendations</h6>
+                    <div class="alert alert-info">
+                        ${data.recommendations ? data.recommendations.join('<br>') : 'No specific recommendations available'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('executiveReportContent').innerHTML = 
+                `<div class="alert alert-danger">Error loading report: ${error.message}</div>`;
+        });
+    
+    // Show modal
+    $(modal).modal('show');
+    
+    // Remove modal when closed
+    $(modal).on('hidden.bs.modal', function() {
+        document.body.removeChild(modal);
+    });
+}
+
+function downloadExecutiveReport() {
+    window.location.href = '/api/executive-report/download';
+}
+
+function exportReports() {
+    window.location.href = '/api/reports/export';
+}
+
+function exportAllReports() {
+    window.location.href = '/api/reports/export-all';
+}
+
+function scheduleReport() {
+    showAlert('info', 'Report scheduling feature coming soon!');
+}
+
+function emailReport() {
+    showAlert('info', 'Email report feature coming soon!');
+}
+
+function viewDashboard() {
+    window.location.href = '/';
+}
+
+// Date range handling
+document.getElementById('dateRange').addEventListener('change', function() {
+    const customDateRange = document.getElementById('customDateRange');
+    if (this.value === 'custom') {
+        customDateRange.style.display = 'block';
+    } else {
+        customDateRange.style.display = 'none';
+    }
+});
+</script>
+
+<style>
+.metric-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+
+.metric-icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.card {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.btn-group .btn {
+    border-radius: 5px !important;
+    margin-right: 2px;
+}
+</style>
+{% endblock %}

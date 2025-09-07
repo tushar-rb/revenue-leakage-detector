@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% block title %}Investigation Tickets - Revenue Leakage Detection System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-3">
+            <i class="bi bi-ticket-detailed text-primary me-2"></i>
+            Investigation Tickets
+        </h1>
+        <p class="text-muted">Manage and track revenue leakage investigation tickets</p>
+    </div>
+</div>
+
+<!-- Ticket Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <i class="bi bi-list-task display-5 text-primary mb-2"></i>
+                <h4 id="totalTickets">{{ tickets|length }}</h4>
+                <p class="text-muted mb-0">Total Tickets</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-circle display-5 text-danger mb-2"></i>
+                <h4 id="criticalTickets">{{ tickets|selectattr('priority', 'equalto', 'CRITICAL')|list|length }}</h4>
+                <p class="text-muted mb-0">Critical</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle display-5 text-warning mb-2"></i>
+                <h4 id="highTickets">{{ tickets|selectattr('priority', 'equalto', 'HIGH')|list|length }}</h4>
+                <p class="text-muted mb-0">High Priority</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <i class="bi bi-clock display-5 text-info mb-2"></i>
+                <h4 id="openTickets">{{ tickets|selectattr('status', 'equalto', 'OPEN')|list|length }}</h4>
+                <p class="text-muted mb-0">Open</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Controls -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="priorityFilter" class="form-label">Priority</label>
+                        <select id="priorityFilter" class="form-select" onchange="filterTickets()">
+                            <option value="">All Priorities</option>
+                            <option value="CRITICAL">Critical</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Status</label>
+                        <select id="statusFilter" class="form-select" onchange="filterTickets()">
+                            <option value="">All Statuses</option>
+                            <option value="OPEN">Open</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="RESOLVED">Resolved</option>
+                            <option value="CLOSED">Closed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="searchInput" class="form-label">Search</label>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search tickets..." onkeyup="filterTickets()">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                            <i class="bi bi-x-circle me-1"></i>Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title">Quick Actions</h6>
+                <button class="btn btn-gradient btn-sm me-2" onclick="runAnalysis()">
+                    <i class="bi bi-plus-circle me-1"></i>Generate New Tickets
+                </button>
+                <button class="btn btn-outline-info btn-sm" onclick="exportTickets()">
+                    <i class="bi bi-download me-1"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tickets Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-list me-2"></i>Investigation Tickets
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if tickets %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="ticketsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>Title</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Customer</th>
+                                <th>Estimated Loss</th>
+                                <th>Assigned Team</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketsTableBody">
+                            {% for ticket in tickets %}
+                            <tr data-priority="{{ ticket.priority }}" 
+                                data-status="{{ ticket.status }}" 
+                                data-search="{{ (ticket.title + ' ' + ticket.customer_id + ' ' + ticket.assigned_team)|lower }}">
+                                <td>
+                                    <strong>{{ ticket.ticket_id }}</strong>
+                                </td>
+                                <td>
+                                    <a href="#" onclick="viewTicketDetails('{{ ticket.ticket_id }}')" class="text-decoration-none">
+                                        {{ ticket.title }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if ticket.priority == 'CRITICAL' else 'warning' if ticket.priority == 'HIGH' else 'info' if ticket.priority == 'MEDIUM' else 'success' }}">
+                                        {{ ticket.priority }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" 
+                                            onchange="updateTicketStatus('{{ ticket.ticket_id }}', this.value)"
+                                            style="width: auto;">
+                                        <option value="OPEN" {{ 'selected' if ticket.status == 'OPEN' else '' }}>Open</option>
+                                        <option value="IN_PROGRESS" {{ 'selected' if ticket.status == 'IN_PROGRESS' else '' }}>In Progress</option>
+                                        <option value="RESOLVED" {{ 'selected' if ticket.status == 'RESOLVED' else '' }}>Resolved</option>
+                                        <option value="CLOSED" {{ 'selected' if ticket.status == 'CLOSED' else '' }}>Closed</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <strong>{{ ticket.customer_id }}</strong>
+                                </td>
+                                <td>
+                                    <strong class="text-danger">${{ "%.2f"|format(ticket.estimated_loss) }}</strong>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ ticket.assigned_team }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ ticket.created_timestamp[:10] if ticket.created_timestamp else 'N/A' }}</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="viewTicketDetails('{{ ticket.ticket_id }}')" 
+                                                data-bs-toggle="tooltip" 
+                                                title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                onclick="editTicket('{{ ticket.ticket_id }}')"
+                                                data-bs-toggle="tooltip" 
+                                                title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center p-5">
+                    <i class="bi bi-ticket-detailed display-1 text-muted mb-3"></i>
+                    <h4 class="text-muted">No Investigation Tickets</h4>
+                    <p class="text-muted mb-4">No tickets have been generated yet. Run an analysis to create investigation tickets.</p>
+                    <button class="btn btn-gradient" onclick="runAnalysis()">
+                        <i class="bi bi-play-circle me-2"></i>Run Analysis
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ticket Details Modal -->
+<div class="modal fade" id="ticketDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-ticket-detailed me-2"></i>Ticket Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="ticketDetailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printTicket()">
+                    <i class="bi bi-printer me-1"></i>Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
+    // Filter tickets
+    function filterTickets() {
+        const priorityFilter = document.getElementById('priorityFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        const searchInput = document.getElementById('searchInput').value.toLowerCase();
+        
+        const tableBody = document.getElementById('ticketsTableBody');
+        const rows = tableBody.querySelectorAll('tr');
+        
+        rows.forEach(row => {
+            const priority = row.getAttribute('data-priority');
+            const status = row.getAttribute('data-status');
+            const searchText = row.getAttribute('data-search');
+            
+            let showRow = true;
+            
+            // Apply filters
+            if (priorityFilter && priority !== priorityFilter) {
+                showRow = false;
+            }
+            
+            if (statusFilter && status !== statusFilter) {
+                showRow = false;
+            }
+            
+            if (searchInput && !searchText.includes(searchInput)) {
+                showRow = false;
+            }
+            
+            row.style.display = showRow ? '' : 'none';
+        });
+    }
+
+    // Clear filters
+    function clearFilters() {
+        document.getElementById('priorityFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('searchInput').value = '';
+        filterTickets();
+    }
+
+    // Update ticket status
+    function updateTicketStatus(ticketId, newStatus) {
+        fetch(`/api/ticket/${ticketId}/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showAlert(`Ticket ${ticketId} status updated to ${newStatus}`, 'success');
+                
+                // Update the row's data attribute
+                const row = document.querySelector(`tr[data-search*="${ticketId.toLowerCase()}"]`);
+                if (row) {
+                    row.setAttribute('data-status', newStatus);
+                }
+            } else {
+                showAlert('Failed to update ticket status', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating ticket:', error);
+            showAlert('Error updating ticket status', 'danger');
+        });
+    }
+
+    // View ticket details
+    function viewTicketDetails(ticketId) {
+        // Find ticket data
+        fetch('/api/tickets')
+            .then(response => response.json())
+            .then(tickets => {
+                const ticket = tickets.find(t => t.ticket_id === ticketId);
+                if (ticket) {
+                    displayTicketDetails(ticket);
+                } else {
+                    showAlert('Ticket not found', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading ticket details:', error);
+                showAlert('Error loading ticket details', 'danger');
+            });
+    }
+
+    // Display ticket details in modal
+    function displayTicketDetails(ticket) {
+        const modal = new bootstrap.Modal(document.getElementById('ticketDetailsModal'));
+        const content = document.getElementById('ticketDetailsContent');
+        
+        let investigationSteps = '';
+        if (ticket.investigation_steps && Array.isArray(ticket.investigation_steps)) {
+            investigationSteps = ticket.investigation_steps.map(step => `<li>${step}</li>`).join('');
+        }
+        
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-2">TICKET INFORMATION</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>Ticket ID:</strong></td><td>${ticket.ticket_id}</td></tr>
+                        <tr><td><strong>Priority:</strong></td><td><span class="badge bg-${getPriorityColor(ticket.priority)}">${ticket.priority}</span></td></tr>
+                        <tr><td><strong>Status:</strong></td><td><span class="badge bg-secondary">${ticket.status}</span></td></tr>
+                        <tr><td><strong>Customer ID:</strong></td><td>${ticket.customer_id}</td></tr>
+                        <tr><td><strong>Contract ID:</strong></td><td>${ticket.contract_id}</td></tr>
+                        <tr><td><strong>Leakage Type:</strong></td><td>${ticket.leakage_type.replace(/_/g, ' ')}</td></tr>
+                        <tr><td><strong>Estimated Loss:</strong></td><td class="text-danger"><strong>$${parseFloat(ticket.estimated_loss).toFixed(2)}</strong></td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-2">ASSIGNMENT & TIMING</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>Assigned Team:</strong></td><td>${ticket.assigned_team}</td></tr>
+                        <tr><td><strong>Expected Resolution:</strong></td><td>${ticket.expected_resolution_time}</td></tr>
+                        <tr><td><strong>Created:</strong></td><td>${formatDate(ticket.created_timestamp)}</td></tr>
+                        <tr><td><strong>Urgency Reason:</strong></td><td>${ticket.urgency_reason}</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6 class="text-muted mb-2">DESCRIPTION</h6>
+                    <div class="border rounded p-3 bg-light">
+                        <p class="mb-0">${ticket.description.replace(/\\n/g, '<br>')}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6 class="text-muted mb-2">BUSINESS IMPACT</h6>
+                    <div class="border rounded p-3 bg-light">
+                        <p class="mb-0">${ticket.business_impact}</p>
+                    </div>
+                </div>
+            </div>
+            
+            ${investigationSteps ? `
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6 class="text-muted mb-2">INVESTIGATION STEPS</h6>
+                    <ol class="mb-0">
+                        ${investigationSteps}
+                    </ol>
+                </div>
+            </div>
+            ` : ''}
+        `;
+        
+        modal.show();
+    }
+
+    // Get priority color for badges
+    function getPriorityColor(priority) {
+        switch(priority) {
+            case 'CRITICAL': return 'danger';
+            case 'HIGH': return 'warning';
+            case 'MEDIUM': return 'info';
+            case 'LOW': return 'success';
+            default: return 'secondary';
+        }
+    }
+
+    // Edit ticket (placeholder)
+    function editTicket(ticketId) {
+        showAlert('Edit functionality coming soon for ticket: ' + ticketId, 'info');
+    }
+
+    // Export tickets
+    function exportTickets() {
+        showAlert('Export functionality is in development', 'info');
+    }
+
+    // Print ticket
+    function printTicket() {
+        window.print();
+    }
+</script>
+{% endblock %}

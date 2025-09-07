@@ -1,0 +1,654 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Files - Revenue Leakage Detection{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="content-header">
+        <div class="header-title">
+            <h1><i class="fas fa-cloud-upload-alt"></i> File Upload & Processing</h1>
+            <p class="text-muted">Upload bills, audit logs, and documents for AI-powered analysis</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline-primary" onclick="viewUploadedFiles()">
+                <i class="fas fa-folder-open"></i> View Uploads
+            </button>
+            <button class="btn btn-outline-secondary" onclick="showHelp()">
+                <i class="fas fa-question-circle"></i> Help
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Upload Section -->
+        <div class="col-md-8">
+            <div class="card upload-card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-upload"></i> Upload Your Files
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Drag & Drop Area -->
+                    <div id="dropZone" class="upload-drop-zone">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
+                        </div>
+                        <h4>Drag & Drop Files Here</h4>
+                        <p class="text-muted">or click to browse files</p>
+                        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf,.txt,.csv,.xlsx,.json" multiple style="display: none;">
+                        <button class="btn btn-primary btn-lg mt-3" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-plus"></i> Choose Files
+                        </button>
+                    </div>
+
+                    <!-- Upload Progress -->
+                    <div id="uploadProgress" class="upload-progress" style="display: none;">
+                        <div class="progress-header">
+                            <h6>Processing Files...</h6>
+                            <span class="progress-text">0%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-animated" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Results -->
+                    <div id="uploadResults" class="upload-results" style="display: none;">
+                        <!-- Results will be populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Processing Results -->
+            <div id="processingResults" class="card mt-4" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cog"></i> AI Processing Results
+                    </h5>
+                </div>
+                <div class="card-body" id="processingContent">
+                    <!-- Processing results will be displayed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Information Panel -->
+        <div class="col-md-4">
+            <!-- Supported Formats -->
+            <div class="card info-card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-file-alt"></i> Supported Formats
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if sample_data.supported_formats %}
+                        {% for category, formats in sample_data.supported_formats.items() %}
+                        <div class="format-category mb-3">
+                            <strong>{{ category.title().replace('_', ' ') }}:</strong>
+                            <div class="format-tags">
+                                {% for format in formats %}
+                                <span class="badge badge-info">{{ format }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="format-category mb-3">
+                            <strong>Images:</strong>
+                            <div class="format-tags">
+                                <span class="badge badge-info">JPEG</span>
+                                <span class="badge badge-info">PNG</span>
+                                <span class="badge badge-info">PDF</span>
+                            </div>
+                        </div>
+                        <div class="format-category mb-3">
+                            <strong>Documents:</strong>
+                            <div class="format-tags">
+                                <span class="badge badge-info">PDF</span>
+                                <span class="badge badge-info">TXT</span>
+                                <span class="badge badge-info">CSV</span>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- AI Capabilities -->
+            <div class="card info-card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-robot"></i> AI Capabilities
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if sample_data.processing_capabilities %}
+                        <ul class="capability-list">
+                            {% for capability in sample_data.processing_capabilities %}
+                            <li><i class="fas fa-check text-success"></i> {{ capability }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <ul class="capability-list">
+                            <li><i class="fas fa-check text-success"></i> OCR text extraction</li>
+                            <li><i class="fas fa-check text-success"></i> Amount detection</li>
+                            <li><i class="fas fa-check text-success"></i> Date extraction</li>
+                            <li><i class="fas fa-check text-success"></i> Customer parsing</li>
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Sample Data -->
+            {% if sample_data.sample_bill_data %}
+            <div class="card info-card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-receipt"></i> Sample Bill Structure
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="sample-data">
+                        <p><strong>Invoice:</strong> {{ sample_data.sample_bill_data.invoice_number }}</p>
+                        <p><strong>Customer:</strong> {{ sample_data.sample_bill_data.customer_id }}</p>
+                        <p><strong>Total:</strong> {{ sample_data.sample_bill_data.total_amount | currency }}</p>
+                        <p><strong>Services:</strong> {{ sample_data.sample_bill_data.services | length }} items</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Uploaded Files Modal -->
+    <div class="modal fade" id="uploadedFilesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-folder-open"></i> Uploaded Files
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="uploadedFilesList">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p>Loading files...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// File upload functionality
+let dropZone = document.getElementById('dropZone');
+let fileInput = document.getElementById('fileInput');
+let uploadProgress = document.getElementById('uploadProgress');
+let uploadResults = document.getElementById('uploadResults');
+let processingResults = document.getElementById('processingResults');
+
+// Drag and drop handlers
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    
+    const files = Array.from(e.dataTransfer.files);
+    handleFileUpload(files);
+});
+
+dropZone.addEventListener('click', () => {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    handleFileUpload(files);
+});
+
+// Handle file upload
+function handleFileUpload(files) {
+    if (files.length === 0) return;
+    
+    // Show progress
+    uploadProgress.style.display = 'block';
+    uploadResults.style.display = 'none';
+    processingResults.style.display = 'none';
+    
+    let completed = 0;
+    const results = [];
+    
+    files.forEach((file, index) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            completed++;
+            results.push({ file: file.name, result: data });
+            
+            // Update progress
+            const progress = Math.round((completed / files.length) * 100);
+            updateProgress(progress);
+            
+            if (completed === files.length) {
+                // All files processed
+                displayResults(results);
+            }
+        })
+        .catch(error => {
+            completed++;
+            results.push({ file: file.name, result: { success: false, error: error.message }});
+            
+            const progress = Math.round((completed / files.length) * 100);
+            updateProgress(progress);
+            
+            if (completed === files.length) {
+                displayResults(results);
+            }
+        });
+    });
+}
+
+// Update progress bar
+function updateProgress(percentage) {
+    const progressBar = uploadProgress.querySelector('.progress-bar');
+    const progressText = uploadProgress.querySelector('.progress-text');
+    
+    progressBar.style.width = percentage + '%';
+    progressText.textContent = percentage + '%';
+    
+    if (percentage === 100) {
+        setTimeout(() => {
+            uploadProgress.style.display = 'none';
+        }, 1000);
+    }
+}
+
+// Display upload results
+function displayResults(results) {
+    uploadResults.style.display = 'block';
+    
+    let html = '<h6><i class="fas fa-check-circle text-success"></i> Upload Complete</h6><div class="results-list">';
+    
+    results.forEach(({ file, result }) => {
+        const status = result.success ? 'success' : 'danger';
+        const icon = result.success ? 'check-circle' : 'exclamation-triangle';
+        
+        html += `
+            <div class="result-item alert alert-${status}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-${icon}"></i>
+                        <strong>${file}</strong>
+                    </div>
+                    <div class="result-actions">
+                        ${result.success ? `
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewProcessingResult('${file}', ${JSON.stringify(result).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-eye"></i> View Details
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+                ${result.success ? `
+                    <small class="text-muted d-block mt-2">
+                        File Type: ${result.file_type} | 
+                        Size: ${(result.file_size / 1024).toFixed(1)} KB |
+                        Processing: ${result.processing_method || 'Standard'}
+                    </small>
+                ` : `
+                    <small class="text-danger d-block mt-2">${result.error}</small>
+                `}
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    uploadResults.innerHTML = html;
+    
+    // Show success message
+    const successCount = results.filter(r => r.result.success).length;
+    if (successCount > 0) {
+        showAlert('success', `Successfully processed ${successCount} file(s)!`);
+    }
+}
+
+// View processing result details
+function viewProcessingResult(filename, result) {
+    processingResults.style.display = 'block';
+    
+    let html = `<h6><i class="fas fa-file"></i> ${filename}</h6>`;
+    
+    if (result.financial_data) {
+        const fd = result.financial_data;
+        
+        html += '<div class="processing-details">';
+        
+        // Extracted amounts
+        if (fd.amounts && fd.amounts.length > 0) {
+            html += `
+                <div class="detail-section mb-3">
+                    <h6><i class="fas fa-rupee-sign text-success"></i> Found Amounts</h6>
+                    <div class="amount-tags">
+                        ${fd.amounts.map(amount => `<span class="badge badge-success">${formatIndianCurrency(amount)}</span>`).join(' ')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Invoice numbers
+        if (fd.invoice_numbers && fd.invoice_numbers.length > 0) {
+            html += `
+                <div class="detail-section mb-3">
+                    <h6><i class="fas fa-receipt text-info"></i> Invoice Numbers</h6>
+                    <div class="info-tags">
+                        ${fd.invoice_numbers.map(inv => `<span class="badge badge-info">${inv}</span>`).join(' ')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Dates
+        if (fd.dates && fd.dates.length > 0) {
+            html += `
+                <div class="detail-section mb-3">
+                    <h6><i class="fas fa-calendar text-warning"></i> Dates Found</h6>
+                    <div class="date-tags">
+                        ${fd.dates.map(date => `<span class="badge badge-warning">${date}</span>`).join(' ')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Customer info
+        if (fd.customer_info && fd.customer_info.length > 0) {
+            html += `
+                <div class="detail-section mb-3">
+                    <h6><i class="fas fa-user text-primary"></i> Customer Info</h6>
+                    <div class="customer-tags">
+                        ${fd.customer_info.map(cust => `<span class="badge badge-primary">${cust}</span>`).join(' ')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Service types
+        if (fd.service_types && fd.service_types.length > 0) {
+            html += `
+                <div class="detail-section mb-3">
+                    <h6><i class="fas fa-cogs text-secondary"></i> Services</h6>
+                    <div class="service-tags">
+                        ${fd.service_types.map(service => `<span class="badge badge-secondary">${service}</span>`).join(' ')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Billing summary
+        if (fd.billing_info && Object.keys(fd.billing_info).length > 0) {
+            const bi = fd.billing_info;
+            html += `
+                <div class="detail-section">
+                    <h6><i class="fas fa-chart-bar text-dark"></i> Summary</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Total Amount:</small><br>
+                            <strong>${formatIndianCurrency(bi.total_amount || 0)}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Amount Count:</small><br>
+                            <strong>${bi.amount_count || 0}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+    }
+    
+    // Show extracted text if available (limited)
+    if (result.extracted_text) {
+        const textPreview = result.extracted_text.substring(0, 500) + (result.extracted_text.length > 500 ? '...' : '');
+        html += `
+            <div class="detail-section mt-3">
+                <h6><i class="fas fa-align-left text-muted"></i> Extracted Text Preview</h6>
+                <div class="text-preview">
+                    <pre class="small text-muted">${textPreview}</pre>
+                </div>
+            </div>
+        `;
+    }
+    
+    document.getElementById('processingContent').innerHTML = html;
+    
+    // Scroll to results
+    processingResults.scrollIntoView({ behavior: 'smooth' });
+}
+
+// View uploaded files
+function viewUploadedFiles() {
+    $('#uploadedFilesModal').modal('show');
+    
+    fetch('/api/upload/list')
+        .then(response => response.json())
+        .then(data => {
+            const filesList = document.getElementById('uploadedFilesList');
+            
+            if (data.success && data.files.length > 0) {
+                let html = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Found ${data.total_count} uploaded files (showing ${Math.min(50, data.total_count)} most recent)
+                    </div>
+                    <div class="uploaded-files-table">
+                `;
+                
+                data.files.forEach(file => {
+                    const uploadDate = new Date(file.uploaded).toLocaleString();
+                    const fileSize = (file.size / 1024).toFixed(1);
+                    
+                    html += `
+                        <div class="file-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-file text-primary"></i>
+                                    <strong>${file.filename}</strong>
+                                    <span class="badge badge-secondary">${file.file_type}</span>
+                                </div>
+                                <div class="text-right">
+                                    <small class="text-muted">${fileSize} KB</small><br>
+                                    <small class="text-muted">${uploadDate}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                filesList.innerHTML = html;
+            } else {
+                filesList.innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-folder-open fa-3x mb-3"></i>
+                        <p>No files uploaded yet</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('uploadedFilesList').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading files: ${error.message}
+                </div>
+            `;
+        });
+}
+
+// Show help
+function showHelp() {
+    showAlert('info', `
+        <strong>Upload Help:</strong><br>
+        • Supported formats: Images (JPEG, PNG), Documents (PDF, TXT), Spreadsheets (CSV, XLSX)<br>
+        • Maximum file size: 16MB<br>
+        • The AI will automatically extract amounts, dates, customer info, and service details<br>
+        • OCR is used for image files to extract text
+    `);
+}
+
+// Utility function for Indian currency formatting
+function formatIndianCurrency(amount) {
+    if (typeof amount !== 'number') amount = parseFloat(amount) || 0;
+    return '₹' + amount.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+</script>
+
+<style>
+.upload-card {
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.upload-drop-zone {
+    border: 3px dashed #dee2e6;
+    border-radius: 15px;
+    padding: 3rem 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background: #f8f9fa;
+}
+
+.upload-drop-zone:hover, .upload-drop-zone.drag-over {
+    border-color: #007bff;
+    background: #e3f2fd;
+    transform: translateY(-2px);
+}
+
+.upload-progress {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    background: #f8f9fa;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.upload-results {
+    margin-top: 1rem;
+}
+
+.result-item {
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+}
+
+.info-card {
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.format-tags, .amount-tags, .info-tags, .date-tags, .customer-tags, .service-tags {
+    margin-top: 0.5rem;
+}
+
+.format-tags .badge, .amount-tags .badge, .info-tags .badge, 
+.date-tags .badge, .customer-tags .badge, .service-tags .badge {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.capability-list {
+    list-style: none;
+    padding: 0;
+}
+
+.capability-list li {
+    padding: 0.25rem 0;
+}
+
+.capability-list .fa-check {
+    margin-right: 0.5rem;
+}
+
+.sample-data p {
+    margin-bottom: 0.5rem;
+}
+
+.processing-details .detail-section {
+    padding: 1rem;
+    border-left: 4px solid #007bff;
+    margin-left: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.text-preview pre {
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    padding: 1rem;
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.file-item {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.file-item:last-child {
+    border-bottom: none;
+}
+
+.uploaded-files-table {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.upload-results, .processing-details {
+    animation: fadeInUp 0.5s ease;
+}
+</style>
+{% endblock %}

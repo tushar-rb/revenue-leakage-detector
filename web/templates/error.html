@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Error - Revenue Leakage Detection{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="error-icon mb-4">
+                        {% if error_code == '404' %}
+                            <i class="fas fa-search fa-5x text-muted"></i>
+                        {% elif error_code == '500' %}
+                            <i class="fas fa-exclamation-triangle fa-5x text-danger"></i>
+                        {% else %}
+                            <i class="fas fa-exclamation-circle fa-5x text-warning"></i>
+                        {% endif %}
+                    </div>
+                    
+                    <h1 class="display-4 mb-3">
+                        {% if error_code %}{{ error_code }}{% else %}Error{% endif %}
+                    </h1>
+                    
+                    <h4 class="mb-4">
+                        {% if error_code == '404' %}
+                            Page Not Found
+                        {% elif error_code == '500' %}
+                            Internal Server Error
+                        {% else %}
+                            Something went wrong
+                        {% endif %}
+                    </h4>
+                    
+                    <p class="text-muted mb-4">
+                        {% if error_message %}
+                            {{ error_message }}
+                        {% else %}
+                            {% if error_code == '404' %}
+                                The page you're looking for doesn't exist or has been moved.
+                            {% elif error_code == '500' %}
+                                We're experiencing some technical difficulties. Please try again later.
+                            {% else %}
+                                An unexpected error occurred. Please try again or contact support.
+                            {% endif %}
+                        {% endif %}
+                    </p>
+                    
+                    <div class="error-actions">
+                        <a href="/" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Go Home
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Go Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-icon {
+    opacity: 0.6;
+}
+
+.error-actions {
+    margin-top: 2rem;
+}
+
+.error-actions .btn {
+    margin: 0 0.5rem;
+}
+
+.card {
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 2rem;
+}
+
+.display-4 {
+    font-weight: 300;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
