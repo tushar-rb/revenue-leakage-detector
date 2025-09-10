@@ -97,7 +97,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('enhanced_dashboard') }}">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">
                             <i class="bi bi-speedometer me-1"></i>Enhanced Dashboard
                         </a>
                     </li>
@@ -132,7 +132,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'enhanced_dashboard' %}active{% endif %}" href="{{ url_for('enhanced_dashboard') }}">
+                        <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
                             <i class="bi bi-speedometer me-2"></i>Enhanced Dashboard
                         </a>
                     </li>
